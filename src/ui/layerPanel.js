@@ -46,7 +46,13 @@ const PANEL_GROUPS = [
   },
   {
     label: 'Events',
-    ids: ['rocket-launches', 'earthquakes', 'local-firms', 'fire-perimeters'],
+    ids: [
+      'rocket-launches',
+      'earthquakes',
+      'local-firms',
+      'fire-perimeters',
+      'osint-events',
+    ],
   },
   {
     label: 'Weather',
@@ -70,6 +76,7 @@ const PANEL_POSITIONS = new Map(
   PANEL_ORDER.map(({ id }, index) => [id, index]),
 );
 const PANEL_LABELS = {
+  'osint-events': 'OSINT Events',
   'ais-live-vessels': 'Live Vessels',
   bikeshare: 'Bike Share',
   cctv: 'Cameras',
