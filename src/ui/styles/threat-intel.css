@@ -1451,3 +1451,48 @@ body.ui-embed #threat-intel-workspace {
   color: var(--text-secondary);
   text-transform: uppercase;
 }
+
+/* Purple-team "Validate your defenses" panel in the technique drawer. */
+.ti-defend {
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--ti-low) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ti-low) 32%, transparent);
+  border-radius: 10px;
+}
+
+.ti-defend-title {
+  margin: 0 0 2px;
+  font: 600 13px/1.3 var(--font-sans);
+  color: var(--ti-low);
+}
+
+.ti-defend .ti-note {
+  margin-top: 0;
+}
+
+.ti-defend-block {
+  margin-top: 12px;
+}
+
+.ti-defend-block h5 {
+  margin: 0 0 6px;
+  font: 600 10px/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.ti-defend-block p {
+  margin: 0 0 6px;
+}
+
+.ti-defend-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+
+.ti-defend-list li {
+  color: var(--text-primary);
+}

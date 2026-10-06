@@ -261,6 +261,10 @@ export async function loadAttack() {
     throw new Error('unexpected ATT&CK payload');
   const live = (object) => !object.revoked && !object.x_mitre_deprecated;
   const byStixId = new Map();
+  // ATT&CK v17 detection model: a detection-strategy `detects` a technique and
+  // points at analytics, each of which names concrete log sources.
+  const detectionStrategies = new Map();
+  const analytics = new Map();
   const groups = [];
   const software = [];
   const techniques = [];
@@ -315,14 +319,38 @@ export async function loadAttack() {
         subtechnique: Boolean(object.x_mitre_is_subtechnique),
         platforms: object.x_mitre_platforms || [],
         description: clip(plainText(object.description), 500),
+        detectionStrategies: [],
+        telemetry: [],
         url: attackUrl(object),
         groups: [],
         software: [],
+        mitigations: [],
       };
       if (entry.id) {
         techniques.push(entry);
         byStixId.set(object.id, { kind: 'technique', entry });
       }
+    } else if (object.type === 'course-of-action') {
+      // ATT&CK mitigations — the defensive counterpart to a technique.
+      const entry = {
+        id: externalId(object),
+        name: object.name,
+        description: clip(plainText(object.description), 300),
+        url: attackUrl(object),
+      };
+      if (entry.id) byStixId.set(object.id, { kind: 'mitigation', entry });
+    } else if (object.type === 'x-mitre-detection-strategy') {
+      detectionStrategies.set(object.id, {
+        name: object.name,
+        analyticRefs: object.x_mitre_analytic_refs || [],
+      });
+    } else if (object.type === 'x-mitre-analytic') {
+      analytics.set(
+        object.id,
+        (object.x_mitre_log_source_references || [])
+          .map((ref) => ref.name)
+          .filter(Boolean),
+      );
     } else if (object.type === 'x-mitre-tactic') {
       tactics.push({
         id: externalId(object),
@@ -333,24 +361,59 @@ export async function loadAttack() {
   }
 
   for (const object of bundle.objects) {
-    if (
-      object.type !== 'relationship' ||
-      object.relationship_type !== 'uses' ||
-      !live(object)
-    )
-      continue;
+    if (object.type !== 'relationship' || !live(object)) continue;
     const source = byStixId.get(object.source_ref);
     const target = byStixId.get(object.target_ref);
     if (!source || !target) continue;
-    if (source.kind === 'group' && target.kind === 'technique') {
-      source.entry.techniques.push(target.entry.id);
-      target.entry.groups.push(source.entry.id);
-    } else if (source.kind === 'group' && target.kind === 'software') {
-      source.entry.software.push(target.entry.id);
-      target.entry.groups.push(source.entry.id);
-    } else if (source.kind === 'software' && target.kind === 'technique') {
-      source.entry.techniques.push(target.entry.id);
-      target.entry.software.push(source.entry.id);
+    if (object.relationship_type === 'uses') {
+      if (source.kind === 'group' && target.kind === 'technique') {
+        source.entry.techniques.push(target.entry.id);
+        target.entry.groups.push(source.entry.id);
+      } else if (source.kind === 'group' && target.kind === 'software') {
+        source.entry.software.push(target.entry.id);
+        target.entry.groups.push(source.entry.id);
+      } else if (source.kind === 'software' && target.kind === 'technique') {
+        source.entry.techniques.push(target.entry.id);
+        target.entry.software.push(source.entry.id);
+      }
+    } else if (
+      object.relationship_type === 'mitigates' &&
+      source.kind === 'mitigation' &&
+      target.kind === 'technique'
+    ) {
+      target.entry.mitigations.push({
+        id: source.entry.id,
+        name: source.entry.name,
+      });
+    }
+  }
+
+  // `detects` links a detection strategy to the technique it surfaces. Record
+  // the strategy name and the concrete log sources from its analytics — what a
+  // defender collects to catch the technique.
+  for (const object of bundle.objects) {
+    if (
+      object.type !== 'relationship' ||
+      object.relationship_type !== 'detects' ||
+      !live(object)
+    )
+      continue;
+    const strategy = detectionStrategies.get(object.source_ref);
+    const target = byStixId.get(object.target_ref);
+    if (!strategy || !target || target.kind !== 'technique') continue;
+    if (
+      strategy.name &&
+      !target.entry.detectionStrategies.includes(strategy.name)
+    )
+      target.entry.detectionStrategies.push(strategy.name);
+    for (const analyticRef of strategy.analyticRefs) {
+      for (const logSource of analytics.get(analyticRef) || []) {
+        if (
+          target.entry.telemetry.length < 16 &&
+          !target.entry.telemetry.includes(logSource)
+        )
+          target.entry.telemetry.push(logSource);
+      }
     }
   }
 

@@ -304,6 +304,17 @@ export function describeEntity(ctx, kind, id) {
     const active = t.groups.filter((groupId) =>
       index.activeGroups.has(groupId),
     );
+    const mitigationChip = (mitigation) =>
+      externalLink(
+        `https://attack.mitre.org/mitigations/${mitigation.id}/`,
+        `${mitigation.id} ${mitigation.name}`,
+      ) || mitigation.name;
+    const telemetry = t.telemetry || [];
+    const strategies = t.detectionStrategies || [];
+    const hasDefenses =
+      strategies.length ||
+      telemetry.length ||
+      (t.mitigations && t.mitigations.length);
     add(
       h('p', { text: t.description }),
       facts(
@@ -314,6 +325,63 @@ export function describeEntity(ctx, kind, id) {
         ),
         field('Platforms', t.platforms.join(', ')),
       ),
+      // Purple-team lens: the defender's side of the same technique.
+      hasDefenses
+        ? h(
+            'div',
+            { class: 'ti-defend' },
+            h('h4', {
+              class: 'ti-defend-title',
+              text: 'Validate your defenses',
+            }),
+            h('p', {
+              class: 'ti-note',
+              text: 'Confirm your own controls would detect and mitigate this technique.',
+            }),
+            strategies.length
+              ? h(
+                  'div',
+                  { class: 'ti-defend-block' },
+                  h('h5', {
+                    text: `Detection strategies · ${strategies.length}`,
+                  }),
+                  h(
+                    'ul',
+                    { class: 'ti-defend-list' },
+                    strategies.map((name) => h('li', { text: name })),
+                  ),
+                )
+              : null,
+            telemetry.length
+              ? h(
+                  'div',
+                  { class: 'ti-defend-block' },
+                  h('h5', {
+                    text: `Log sources to collect · ${telemetry.length}`,
+                  }),
+                  h(
+                    'div',
+                    { class: 'ti-chips' },
+                    telemetry.map((label) =>
+                      h('span', { class: 'ti-badge', text: label }),
+                    ),
+                  ),
+                )
+              : null,
+            t.mitigations && t.mitigations.length
+              ? h(
+                  'div',
+                  { class: 'ti-defend-block' },
+                  h('h5', { text: `Mitigations · ${t.mitigations.length}` }),
+                  h(
+                    'div',
+                    { class: 'ti-chips' },
+                    t.mitigations.map(mitigationChip),
+                  ),
+                )
+              : null,
+          )
+        : null,
       related('Groups linked to current activity', active, groupChip),
       related('All groups using it', t.groups, groupChip),
       related('Software using it', t.software, softwareChip),
