@@ -61,6 +61,14 @@ export const KEY_SETUP_KEYS = Object.freeze([
     tier: 'metered',
   }),
   Object.freeze({
+    id: 'anthropic',
+    title: 'ANTHROPIC',
+    unlocks: 'Threat Intel analyst — briefings and questions',
+    getUrl: 'https://console.anthropic.com/settings/keys',
+    envVars: Object.freeze(['ANTHROPIC_API_KEY']),
+    tier: 'metered',
+  }),
+  Object.freeze({
     id: 'aisstream',
     title: 'AISSTREAM',
     unlocks: 'Live ships, worldwide',

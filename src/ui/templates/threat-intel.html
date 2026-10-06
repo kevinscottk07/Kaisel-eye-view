@@ -1,0 +1,30 @@
+  <!-- View switch: the globe and the threat-intelligence workspace -->
+  <nav id="view-switch" aria-label="Views">
+    <button type="button" data-view="globe" aria-pressed="true">GLOBE</button>
+    <button type="button" data-view="threat-intel" aria-pressed="false">THREAT INTEL</button>
+  </nav>
+
+  <section id="threat-intel-workspace" aria-label="Threat intelligence" hidden>
+    <header class="ti-header">
+      <div class="ti-brand">THREAT <span class="title-accent">INTEL</span></div>
+      <nav class="ti-tabs" id="threat-intel-tabs" role="tablist" aria-label="Threat intelligence sections"></nav>
+      <div class="ti-search">
+        <input id="threat-intel-search" class="ti-input" type="search" placeholder="Search CVEs, groups, malware, indicators" aria-label="Search threat intelligence" autocomplete="off" />
+        <div id="threat-intel-search-results" class="ti-search-results" hidden></div>
+      </div>
+      <span id="threat-intel-updated" class="ti-dim"></span>
+      <button id="threat-intel-refresh" class="ti-button" type="button">Refresh</button>
+    </header>
+    <main id="threat-intel-main" class="ti-main"></main>
+    <aside id="threat-intel-drawer" class="ti-drawer" aria-label="Details" hidden>
+      <header class="ti-drawer-header">
+        <button id="threat-intel-drawer-back" class="ti-button" type="button" hidden>Back</button>
+        <div class="ti-drawer-heading">
+          <span id="threat-intel-drawer-kind" class="ti-search-kind"></span>
+          <h2 id="threat-intel-drawer-title"></h2>
+        </div>
+        <button id="threat-intel-drawer-close" class="ti-button" type="button" aria-label="Close details">Close</button>
+      </header>
+      <div id="threat-intel-drawer-body" class="ti-drawer-body"></div>
+    </aside>
+  </section>
