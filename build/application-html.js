@@ -10,6 +10,9 @@ export const APPLICATION_TEMPLATES = Object.freeze([
   'welcome',
   'provider-settings',
   'hud-loading',
+  'threat-intel',
+  'osint',
+  'cases',
 ]);
 const allowed = new Set(APPLICATION_TEMPLATES);
 

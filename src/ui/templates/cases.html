@@ -1,0 +1,19 @@
+  <section id="cases-workspace" aria-label="Case board" hidden>
+    <header class="ti-header cases-header">
+      <div class="ti-brand">CASE <span class="title-accent">BOARD</span></div>
+      <span id="cases-title" class="cases-title"></span>
+      <select id="cases-picker" class="ti-input" aria-label="Open a case"></select>
+      <button id="cases-new" class="ti-button" type="button">New</button>
+      <div class="cases-search ti-search">
+        <input id="cases-search" class="ti-input" type="search" placeholder="Add entity — group, malware, CVE, technique, indicator" aria-label="Add an entity to the case" autocomplete="off" />
+        <div id="cases-search-results" class="ti-search-results" hidden></div>
+      </div>
+      <span id="cases-count" class="ti-dim"></span>
+      <span id="cases-state" class="ti-dim cases-state"></span>
+      <button id="cases-delete" class="ti-button" type="button">Delete</button>
+    </header>
+    <div class="cases-main">
+      <div id="cases-board" class="cases-board"></div>
+      <aside id="cases-panel" class="cases-panel"></aside>
+    </div>
+  </section>

@@ -19,12 +19,17 @@ import { adsbLolProxy } from './aircraft/adsb-lol.js';
 import { aisLiveProxy } from './vessels/ais-live.js';
 import { trackBackfillProxies } from './aircraft/tracks.js';
 import { openAiRealtimeProxy } from './openai.js';
+import { handleClaudeHudSummary, claudeConfigured } from './ai/hud-summary.js';
 import { googlePlacesContextProxy } from './places.js';
 import { keySetupEndpoint } from '../standalone/key-setup.js';
 import { weatherProxy } from './weather.js';
 import { firePerimetersProxy } from './firePerimeters.js';
 import { cycloneProxy } from './cyclones.js';
 import { windProxy } from './wind.js';
+import { threatIntelProxy } from './threat-intel.js';
+import { osintProxy } from './osint.js';
+import { claudeVoiceProxy } from './ai/voice.js';
+import { casesProxy } from './cases.js';
 
 /**
  * Construct the local provider plugins in their established order.
@@ -52,12 +57,23 @@ function localProviderPlugins({ realtime } = {}) {
     adsbLolProxy(),
     aisLiveProxy(),
     trackBackfillProxies(),
-    openAiRealtimeProxy({ realtime }),
+    openAiRealtimeProxy({
+      realtime,
+      // Claude is the HUD brain when its key is present; OpenAI is the fallback.
+      hudSummary: {
+        prefer: claudeConfigured,
+        handle: handleClaudeHudSummary,
+      },
+    }),
     googlePlacesContextProxy(),
     windProxy(),
     weatherProxy(),
     cycloneProxy(),
     firePerimetersProxy(),
+    threatIntelProxy(),
+    osintProxy(),
+    claudeVoiceProxy(),
+    casesProxy(),
     keySetupEndpoint(),
   ];
 }
