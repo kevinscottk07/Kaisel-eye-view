@@ -1,63 +1,51 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="logo-title">
   <title id="logo-title">Kaisel's Eyes</title>
   <defs>
-    <linearGradient id="kaiselFlame" x1="100" y1="20" x2="100" y2="180" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#eaffff" />
-      <stop offset="0.35" stop-color="#7af9ff" />
-      <stop offset="0.7" stop-color="#00d4ff" />
-      <stop offset="1" stop-color="#0a4f7a" />
+    <linearGradient id="wf" x1="100" y1="20" x2="100" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#eaffff" /><stop offset="0.35" stop-color="#7af9ff" />
+      <stop offset="0.7" stop-color="#00d4ff" /><stop offset="1" stop-color="#0a4f7a" />
     </linearGradient>
-    <radialGradient id="kaiselCore" cx="100" cy="112" r="70" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#bff6ff" stop-opacity="0.8" />
-      <stop offset="0.6" stop-color="#00a2d6" stop-opacity="0.18" />
-      <stop offset="1" stop-color="#00a2d6" stop-opacity="0" />
-    </radialGradient>
-    <radialGradient id="kaiselEye" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#ffffff" />
-      <stop offset="0.4" stop-color="#9df6ff" />
-      <stop offset="1" stop-color="#00d4ff" />
-    </radialGradient>
-    <filter id="kaiselGlow" x="-40%" y="-40%" width="180%" height="180%">
-      <feGaussianBlur stdDeviation="2.4" result="b" />
-      <feMerge>
-        <feMergeNode in="b" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
+    <linearGradient id="fBlue" x1="0" y1="50" x2="0" y2="160" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#dffbff" stop-opacity="0.95" /><stop offset="0.5" stop-color="#00d4ff" stop-opacity="0.85" /><stop offset="1" stop-color="#063b5c" stop-opacity="0.2" />
+    </linearGradient>
+    <linearGradient id="fPurple" x1="0" y1="40" x2="0" y2="160" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f3dcff" stop-opacity="0.95" /><stop offset="0.5" stop-color="#9b4cff" stop-opacity="0.9" /><stop offset="1" stop-color="#3a1270" stop-opacity="0.2" />
+    </linearGradient>
+    <linearGradient id="fRed" x1="0" y1="50" x2="0" y2="160" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffe6b0" stop-opacity="0.95" /><stop offset="0.45" stop-color="#ff7a3c" stop-opacity="0.92" /><stop offset="0.75" stop-color="#ff2d4d" stop-opacity="0.7" /><stop offset="1" stop-color="#5c0f1a" stop-opacity="0.2" />
+    </linearGradient>
+    <filter id="fblur" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2.8" /></filter>
+    <filter id="wg" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
     </filter>
   </defs>
 
-  <!-- ambient energy core -->
-  <circle cx="100" cy="112" r="68" fill="url(#kaiselCore)" />
-
-  <!-- Shadow-wyvern crest: a symmetric right half, mirrored for the left.
-       Drawn as angular membrane wings rising from a central serpentine head. -->
-  <g fill="url(#kaiselFlame)" filter="url(#kaiselGlow)">
-    <g>
-      <!-- upper wing -->
-      <path d="M100 96 L128 70 L124 84 L150 58 L146 76 L176 52 L164 78 L186 70 L160 96 L180 94 L150 112 L168 116 L132 120 L140 108 L112 114 Z" />
-      <!-- lower wing claw -->
-      <path d="M118 120 L150 128 L138 134 L164 136 L142 148 L120 138 Z" opacity="0.92" />
-      <!-- mirrored left -->
-      <path transform="translate(200,0) scale(-1,1)" d="M100 96 L128 70 L124 84 L150 58 L146 76 L176 52 L164 78 L186 70 L160 96 L180 94 L150 112 L168 116 L132 120 L140 108 L112 114 Z" />
-      <path transform="translate(200,0) scale(-1,1)" d="M118 120 L150 128 L138 134 L164 136 L142 148 L120 138 Z" opacity="0.92" />
+  <!-- flame aura: blue left, purple centre, red right -->
+  <g filter="url(#fblur)">
+    <g fill="url(#fBlue)">
+      <path d="M66,55 C92,105.5 76.4,156 66,156 C55.6,156 40,105.5 66,55 Z" />
+      <path d="M50,90 C68,123 57.2,156 50,156 C42.8,156 32,123 50,90 Z" />
+      <path d="M80,72 C98,114 87.2,156 80,156 C72.8,156 62,114 80,72 Z" />
     </g>
-
-    <!-- central head / neck: a lean serpentine wyvern facing forward -->
-    <path d="M100 42
-             L108 58 L104 70 L112 84 L106 96
-             L116 112 L108 128 L114 150 L100 176
-             L86 150 L92 128 L84 112 L94 96
-             L88 84 L96 70 L92 58 Z" />
-    <!-- horns -->
-    <path d="M92 58 L82 40 L95 52 Z" />
-    <path d="M108 58 L118 40 L105 52 Z" />
+    <g fill="url(#fPurple)">
+      <path d="M100,22 C130,89 112,156 100,156 C88,156 70,89 100,22 Z" />
+      <path d="M88,70 C104,113 94.4,156 88,156 C81.6,156 72,113 88,70 Z" />
+      <path d="M112,70 C128,113 118.4,156 112,156 C105.6,156 96,113 112,70 Z" />
+    </g>
+    <g fill="url(#fRed)">
+      <path d="M134,55 C160,105.5 144.4,156 134,156 C123.6,156 108,105.5 134,55 Z" />
+      <path d="M150,90 C168,123 157.2,156 150,156 C142.8,156 132,123 150,90 Z" />
+      <path d="M120,72 C138,114 127.2,156 120,156 C112.8,156 102,114 120,72 Z" />
+    </g>
   </g>
 
-  <!-- the eyes -->
-  <g filter="url(#kaiselGlow)">
-    <ellipse cx="92" cy="86" rx="4.6" ry="6.6" fill="url(#kaiselEye)" transform="rotate(18 92 86)" />
-    <ellipse cx="108" cy="86" rx="4.6" ry="6.6" fill="url(#kaiselEye)" transform="rotate(-18 108 86)" />
-    <circle cx="92" cy="86" r="1.5" fill="#021a26" />
-    <circle cx="108" cy="86" r="1.5" fill="#021a26" />
+  <!-- shadow-wyvern crest -->
+  <g fill="url(#wf)" filter="url(#wg)">
+    <path d="M100 96 L128 70 L124 84 L150 58 L146 76 L176 52 L164 78 L186 70 L160 96 L180 94 L150 112 L168 116 L132 120 L140 108 L112 114 Z" />
+    <path d="M118 120 L150 128 L138 134 L164 136 L142 148 L120 138 Z" opacity="0.92" />
+    <path transform="translate(200,0) scale(-1,1)" d="M100 96 L128 70 L124 84 L150 58 L146 76 L176 52 L164 78 L186 70 L160 96 L180 94 L150 112 L168 116 L132 120 L140 108 L112 114 Z" />
+    <path transform="translate(200,0) scale(-1,1)" d="M118 120 L150 128 L138 134 L164 136 L142 148 L120 138 Z" opacity="0.92" />
+    <path d="M100 42 L108 58 L104 70 L112 84 L106 96 L116 112 L108 128 L114 150 L100 176 L86 150 L92 128 L84 112 L94 96 L88 84 L96 70 L92 58 Z" />
+    <path d="M92 58 L82 40 L95 52 Z" /><path d="M108 58 L118 40 L105 52 Z" />
   </g>
 </svg>
