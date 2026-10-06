@@ -95,3 +95,47 @@ export function createFeedCache({ name, ttlMs, load }) {
 
   return { get };
 }
+
+/**
+ * Per-key in-memory cache with single-flight loading and a bounded size, for
+ * lookups that vary by argument (a device's CPEs, a CPE's CVEs). A failed load
+ * rejects and is not cached. Oldest entries are evicted past `max`.
+ *
+ * @template T
+ * @param {{ ttlMs: number, max?: number, load: (key: string) => Promise<T> }} options
+ * @returns {{ get: (key: string) => Promise<T> }}
+ */
+export function createKeyedCache({ ttlMs, max = 64, load }) {
+  /** @type {Map<string, {at: number, data: T}>} */
+  const entries = new Map();
+  /** @type {Map<string, Promise<T>>} */
+  const inflight = new Map();
+
+  async function get(key) {
+    const hit = entries.get(key);
+    if (hit && Date.now() - hit.at < ttlMs) {
+      // Refresh LRU order.
+      entries.delete(key);
+      entries.set(key, hit);
+      return hit.data;
+    }
+    const pending = inflight.get(key);
+    if (pending) return pending;
+    const promise = Promise.resolve(load(key))
+      .then((data) => {
+        entries.set(key, { at: Date.now(), data });
+        while (entries.size > max) {
+          const oldest = entries.keys().next().value;
+          entries.delete(oldest);
+        }
+        return data;
+      })
+      .finally(() => {
+        inflight.delete(key);
+      });
+    inflight.set(key, promise);
+    return promise;
+  }
+
+  return { get };
+}

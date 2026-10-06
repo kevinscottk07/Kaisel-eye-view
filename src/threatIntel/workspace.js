@@ -13,6 +13,7 @@ import {
   overviewView,
   vulnerabilitiesView,
 } from './views.js';
+import { exposureView } from './exposureView.js';
 import { describeEntity, kindLabel } from './detail.js';
 
 const TABS = [
@@ -22,6 +23,7 @@ const TABS = [
   ['malware', 'Malware'],
   ['actors', 'Threat groups'],
   ['matrix', 'ATT&CK'],
+  ['exposure', 'Asset Exposure'],
   ['analyst', 'Analyst'],
 ];
 
@@ -174,6 +176,7 @@ export function mountThreatIntelWorkspace() {
       malware: malwareView,
       actors: actorsView,
       matrix: matrixView,
+      exposure: exposureView,
     };
     replaceChildren(main, views[activeTab](ctx, tabPreset));
   }

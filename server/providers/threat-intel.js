@@ -1,4 +1,4 @@
-import { createFeedCache } from './threat-intel/cache.js';
+import { createFeedCache, createKeyedCache } from './threat-intel/cache.js';
 import {
   loadAttack,
   loadEpss,
@@ -8,7 +8,9 @@ import {
   loadThreatFox,
   loadUrlhaus,
 } from './threat-intel/feeds.js';
-import { generateBrief } from './threat-intel/brief.js';
+import { searchCpes, cvesForCpe } from './threat-intel/nvd.js';
+import { assembleExposure } from './threat-intel/exposure.js';
+import { generateBrief, generateExposureBrief } from './threat-intel/brief.js';
 import { sameSiteGated } from './common/same-site.js';
 import { makeCostRateLimiter, clientKey } from './common/rate-limit.js';
 import { readRequestBody } from './common/request.js';
@@ -133,6 +135,26 @@ export function threatIntelProxy() {
     ttlMs: 6 * HOUR,
     load: () => loadEpss(epssIds),
   });
+
+  // Exposure-view lookups vary by device, so they use per-key caches that
+  // respect NVD's keyless rate limit across repeated views of an asset.
+  const cpeSearchCache = createKeyedCache({
+    ttlMs: 6 * HOUR,
+    max: 128,
+    load: (query) => searchCpes(query, { limit: 20 }),
+  });
+  const cveByCpeCache = createKeyedCache({
+    ttlMs: 6 * HOUR,
+    max: 64,
+    load: (cpeName) => cvesForCpe(cpeName, { limit: 500 }),
+  });
+  const exposureCache = createKeyedCache({
+    ttlMs: 30 * MINUTE,
+    max: 48,
+    load: buildExposure,
+  });
+  /** @type {Map<string, {at: number, body: object}>} */
+  const exposureBriefCache = new Map();
 
   /** @type {?{at: number, payload: object}} */
   let assembled = null;
@@ -478,13 +500,198 @@ export function threatIntelProxy() {
     sendJson(res, 200, body);
   }
 
+  /**
+   * Resolve one CPE to its exposure profile. The most severe CVEs (and every
+   * exploited one) are analyzed, bounding the EPSS lookups and payload. Wrapped
+   * by exposureCache.
+   */
+  async function buildExposure(cpeName) {
+    const [{ total, cves }, kev] = await Promise.all([
+      cveByCpeCache.get(cpeName),
+      caches.kev.get(),
+    ]);
+    const kevIds = new Set((kev.data?.entries || []).map((entry) => entry.id));
+    const exploited = cves.filter((cve) => kevIds.has(cve.id));
+    const rest = cves
+      .filter((cve) => !kevIds.has(cve.id))
+      .sort(
+        (a, b) =>
+          (b.cvss || 0) - (a.cvss || 0) ||
+          String(b.published || '').localeCompare(String(a.published || '')),
+      );
+    const analyzed = [...exploited, ...rest].slice(
+      0,
+      Math.max(300, exploited.length),
+    );
+    let epss = {};
+    try {
+      epss = await loadEpss(analyzed.map((cve) => cve.id));
+    } catch {
+      epss = {};
+    }
+    return assembleExposure({
+      cpeName,
+      cves: analyzed,
+      epss,
+      kevIds,
+      totalCves: total,
+    });
+  }
+
+  /** Compact an exposure profile for one model request. */
+  function exposureSnapshot(exposure) {
+    return {
+      asset: exposure.asset,
+      stats: exposure.stats,
+      layers: exposure.layers.map((layer) => ({
+        layer: layer.n,
+        name: layer.name,
+        cves: layer.count,
+        exploited: layer.kev,
+      })),
+      topCves: exposure.cves.slice(0, 40).map((cve) => ({
+        id: cve.id,
+        cvss: cve.cvss,
+        severity: cve.severity,
+        epss: cve.epss,
+        exploited: cve.kev,
+        osiLayer: cve.osiLayer,
+        cwes: cve.cwes,
+        description: cve.description.slice(0, 200),
+      })),
+      attackPatterns: exposure.chain.patterns.slice(0, 24).map((pattern) => ({
+        id: pattern.id,
+        name: pattern.name,
+        severity: pattern.severity,
+        weaknesses: pattern.matchedCwes,
+        techniques: pattern.attack,
+      })),
+      techniques: exposure.chain.techniqueIds,
+      weaknessesWithoutMappedRoute: exposure.chain.uncoveredCwes,
+    };
+  }
+
+  async function handleExposureBrief(req, res) {
+    if (req.method !== 'POST') {
+      sendJson(res, 405, { error: 'Method not allowed' });
+      return;
+    }
+    const key = apiKey();
+    if (!key) {
+      sendJson(res, 503, { error: 'no_key' });
+      return;
+    }
+    let cpe = '';
+    let question = null;
+    try {
+      const body = JSON.parse((await readRequestBody(req, 16 * 1024)) || '{}');
+      cpe = typeof body.cpe === 'string' ? body.cpe.trim() : '';
+      if (typeof body.question === 'string' && body.question.trim())
+        question = body.question.trim().slice(0, 2000);
+    } catch {
+      sendJson(res, 400, { error: 'Invalid request body' });
+      return;
+    }
+    if (!cpe.startsWith('cpe:2.3:')) {
+      sendJson(res, 400, { error: 'A cpe is required' });
+      return;
+    }
+    const cacheKey = cpe;
+    if (
+      !question &&
+      exposureBriefCache.has(cacheKey) &&
+      Date.now() - exposureBriefCache.get(cacheKey).at < BRIEF_TTL_MS
+    ) {
+      sendJson(res, 200, {
+        ...exposureBriefCache.get(cacheKey).body,
+        cached: true,
+      });
+      return;
+    }
+    if (limiter === undefined)
+      limiter = makeCostRateLimiter(
+        process.env.GEV_RATELIMIT_ANTHROPIC_PER_MIN,
+        ANTHROPIC_DEFAULT_PER_MIN,
+      );
+    if (limiter && !limiter(clientKey(req))) {
+      res.setHeader('Retry-After', '10');
+      sendJson(res, 429, { error: 'Rate limit exceeded' });
+      return;
+    }
+    let exposure;
+    try {
+      exposure = await exposureCache.get(cpe);
+    } catch (err) {
+      console.warn(
+        '[threat-intel] exposure build failed:',
+        err?.message || err,
+      );
+      sendJson(res, 502, { error: 'Could not load this asset from NVD.' });
+      return;
+    }
+    const result = await generateExposureBrief({
+      apiKey: key,
+      exposure: exposureSnapshot(exposure),
+      question,
+    });
+    if (!result.ok) {
+      sendJson(res, result.status, { error: result.error });
+      return;
+    }
+    const body = {
+      text: result.text,
+      model: result.model,
+      generatedAt: Date.now(),
+    };
+    if (!question) exposureBriefCache.set(cacheKey, { at: Date.now(), body });
+    sendJson(res, 200, body);
+  }
+
   const install = (middlewares) => {
+    middlewares.use(
+      '/api/threat-intel/exposure/brief',
+      sameSiteGated(handleExposureBrief),
+    );
     middlewares.use('/api/threat-intel/brief', sameSiteGated(handleBrief));
     middlewares.use('/api/threat-intel', async (req, res, next) => {
       try {
-        const subPath = String(req.url || '').split('?')[0];
+        const [subPath, rawQuery = ''] = String(req.url || '').split('?');
+        const query = new URLSearchParams(rawQuery);
         if (subPath === '/data') {
           sendJson(res, 200, await getAssembled());
+        } else if (subPath === '/exposure/search') {
+          const q = (query.get('q') || '').trim();
+          if (q.length < 2) {
+            sendJson(res, 200, { query: q, results: [] });
+            return;
+          }
+          try {
+            const results = await cpeSearchCache.get(q.toLowerCase());
+            sendJson(res, 200, { query: q, results });
+          } catch (err) {
+            console.warn(
+              '[threat-intel] cpe search failed:',
+              err?.message || err,
+            );
+            sendJson(res, 502, { error: 'NVD product search is unavailable.' });
+          }
+        } else if (subPath === '/exposure') {
+          const cpe = (query.get('cpe') || '').trim();
+          if (!cpe.startsWith('cpe:2.3:')) {
+            sendJson(res, 400, { error: 'A cpe query parameter is required.' });
+            return;
+          }
+          try {
+            sendJson(res, 200, await exposureCache.get(cpe));
+          } catch (err) {
+            console.warn(
+              '[threat-intel] exposure failed:',
+              err?.message || err,
+            );
+            sendJson(res, 502, {
+              error: 'Could not load this asset from NVD.',
+            });
+          }
         } else if (subPath === '/attack') {
           const attack = await caches.attack.get();
           if (!attack.data) {

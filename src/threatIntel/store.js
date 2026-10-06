@@ -85,6 +85,42 @@ export async function askAnalyst(question) {
   return body;
 }
 
+/** Resolve a free-text device/software query to candidate CPEs. */
+export async function searchDevices(query) {
+  const body = await getJson(
+    `/api/threat-intel/exposure/search?q=${encodeURIComponent(query)}`,
+  );
+  return body.results || [];
+}
+
+/** Load one asset's exposure profile by CPE. */
+export async function loadExposure(cpe) {
+  return getJson(`/api/threat-intel/exposure?cpe=${encodeURIComponent(cpe)}`);
+}
+
+/**
+ * Ask Claude to triage an asset's exposure. Resolves to
+ * {text, model, generatedAt} or throws an Error whose `code` is `no_key`.
+ */
+export async function askExposureAnalyst(cpe, question) {
+  const res = await fetch('/api/threat-intel/exposure/brief', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(question ? { cpe, question } : { cpe }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const error = new Error(
+      body.error === 'no_key'
+        ? 'No Anthropic API key is configured.'
+        : body.error || `Request failed (HTTP ${res.status}).`,
+    );
+    error.code = body.error === 'no_key' ? 'no_key' : 'failed';
+    throw error;
+  }
+  return body;
+}
+
 const matches = (needle, ...fields) =>
   fields.some((field) =>
     String(field || '')

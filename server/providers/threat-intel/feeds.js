@@ -6,7 +6,10 @@
 
 const USER_AGENT = 'gods-eye-view threat-intel (local dashboard)';
 
-async function fetchJson(url, { timeoutMs = 60_000, headers = {} } = {}) {
+export async function fetchJson(
+  url,
+  { timeoutMs = 60_000, headers = {} } = {},
+) {
   const res = await fetch(url, {
     headers: {
       'User-Agent': USER_AGENT,
@@ -75,7 +78,7 @@ function nvdTimestamp(date) {
   return date.toISOString().replace('Z', '');
 }
 
-function normalizeNvdCve(cve) {
+export function normalizeNvdCve(cve) {
   const metric =
     cve.metrics?.cvssMetricV31?.[0] ||
     cve.metrics?.cvssMetricV30?.[0] ||
