@@ -419,6 +419,28 @@ export function mountThreatIntelWorkspace() {
   for (const button of switcher.querySelectorAll('button[data-view]'))
     button.addEventListener('click', () => setView(button.dataset.view));
   refreshButton.addEventListener('click', () => ensureLoaded(true));
+
+  // Cursor-following spotlight on the backdrop. Coalesced to one update per
+  // frame; the backdrop reads --ti-spot-x/--ti-spot-y in the stylesheet.
+  let spotPending = false;
+  root.addEventListener('pointermove', (event) => {
+    if (spotPending) return;
+    spotPending = true;
+    requestAnimationFrame(() => {
+      spotPending = false;
+      const rect = root.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      root.style.setProperty(
+        '--ti-spot-x',
+        `${((event.clientX - rect.left) / rect.width) * 100}%`,
+      );
+      root.style.setProperty(
+        '--ti-spot-y',
+        `${((event.clientY - rect.top) / rect.height) * 100}%`,
+      );
+    });
+  });
+
   root.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !drawer.hidden) closeDrawer();
     // Keep the globe's keyboard shortcuts from firing while typing here.

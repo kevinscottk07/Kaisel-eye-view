@@ -987,3 +987,187 @@ body.ui-embed #view-switch,
 body.ui-embed #threat-intel-workspace {
   display: none !important;
 }
+
+/* ============================================================
+   Mission-control pass — cinematic motion and depth.
+   Scoped to the workspace; respects prefers-reduced-motion.
+   ============================================================ */
+
+#threat-intel-workspace {
+  --ti-spot-x: 70%;
+  --ti-spot-y: -10%;
+  isolation: isolate;
+}
+
+/* A faint industrial grid plus a cursor-following spotlight, both behind the
+   content. The spotlight follows --ti-spot-x/--ti-spot-y set in workspace.js. */
+#threat-intel-workspace::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      620px circle at var(--ti-spot-x) var(--ti-spot-y),
+      color-mix(in srgb, var(--accent) 10%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(var(--ti-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ti-line) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    46px 46px,
+    46px 46px;
+  opacity: 0.5;
+  transition: background-position 0.2s ease-out;
+}
+
+/* Staggered entrance for the overview's tiles and cards. */
+@keyframes ti-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ti-tile,
+.ti-card {
+  animation: ti-rise 0.55s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+.ti-tiles .ti-tile:nth-child(1) {
+  animation-delay: 0.02s;
+}
+.ti-tiles .ti-tile:nth-child(2) {
+  animation-delay: 0.06s;
+}
+.ti-tiles .ti-tile:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.ti-tiles .ti-tile:nth-child(4) {
+  animation-delay: 0.14s;
+}
+.ti-tiles .ti-tile:nth-child(5) {
+  animation-delay: 0.18s;
+}
+.ti-tiles .ti-tile:nth-child(6) {
+  animation-delay: 0.22s;
+}
+
+.ti-grid .ti-card:nth-child(odd) {
+  animation-delay: 0.12s;
+}
+.ti-grid .ti-card:nth-child(even) {
+  animation-delay: 0.18s;
+}
+
+/* Extended, luminous KPI numerals. */
+.ti-tile-value {
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.ti-tile-alert .ti-tile-value {
+  text-shadow: 0 0 22px color-mix(in srgb, var(--ti-high) 28%, transparent);
+}
+
+/* Tiles lift and light their top edge on hover. */
+.ti-tile {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.ti-tile::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--accent),
+    transparent
+  );
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.ti-tile:hover {
+  transform: translateY(-2px);
+}
+
+.ti-tile:hover::after {
+  opacity: 0.9;
+}
+
+/* The active tab underline glows. */
+.ti-tab[aria-selected='true'] {
+  box-shadow: 0 1px 10px -2px var(--accent-glow);
+}
+
+/* A thin scanning sweep along the header, like a live console. */
+.ti-header {
+  position: relative;
+  overflow: hidden;
+}
+
+.ti-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 42%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: ti-sweep 6s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes ti-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(338%);
+  }
+}
+
+/* Drawer slides in from the right. */
+@keyframes ti-drawer-in {
+  from {
+    transform: translateX(26px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.ti-drawer:not([hidden]) {
+  animation: ti-drawer-in 0.32s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ti-tile,
+  .ti-card,
+  .ti-drawer:not([hidden]) {
+    animation: none;
+  }
+  #threat-intel-workspace::before {
+    transition: none;
+  }
+  .ti-header::after {
+    animation: none;
+    opacity: 0.3;
+  }
+}

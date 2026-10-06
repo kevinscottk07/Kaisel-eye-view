@@ -9,16 +9,33 @@ import { sameSiteGated } from './common/same-site.js';
  *
  * Keeps OPENAI_API_KEY server-side while the browser connects to the
  * Realtime API over WebRTC with a short-lived secret.
+ *
+ * `hudSummary` optionally supplies an alternative HUD-summary brain:
+ * `{ prefer(): boolean, handle(req, res) }`. When `prefer()` is true the
+ * request runs through `handle` (Claude); otherwise the OpenAI handler runs,
+ * which also returns the keyless capability response when no key is set. The
+ * alternative is injected so this exported provider keeps no dependency on it.
  */
 function openAiRealtimeProxy({
   sourceRoot = defaultSourceRoot,
   annotationGuidance,
   realtime = {},
+  hudSummary = null,
 } = {}) {
   function install(middlewares) {
     // Cost-bearing and log endpoints refuse cross-site browser requests
     // (see server/providers/common/same-site.js and SECURITY.md).
-    middlewares.use('/api/openai/hud-summary', sameSiteGated(handleHudSummary));
+    const hudSummaryHandler =
+      hudSummary && typeof hudSummary.handle === 'function'
+        ? (req, res) =>
+            hudSummary.prefer()
+              ? hudSummary.handle(req, res)
+              : handleHudSummary(req, res)
+        : handleHudSummary;
+    middlewares.use(
+      '/api/openai/hud-summary',
+      sameSiteGated(hudSummaryHandler),
+    );
 
     middlewares.use(
       '/api/realtime/debug-log',
