@@ -18,11 +18,13 @@ import { anthropicClient } from './client.js';
 const MODEL_DEFAULT = 'claude-sonnet-5-5';
 const ANTHROPIC_DEFAULT_PER_MIN = 20;
 
-const SYSTEM = `You are the voice of a cinematic intelligence console ("God's Eye View / Kaisel"). The user speaks to you; your words are read aloud, so reply in one or two short, natural spoken sentences — no markdown, no lists, no emoji.
+const SYSTEM = `You are the voice of a cinematic intelligence console ("Kaisel's Eyes"). The user speaks to you; your words are read aloud, so reply in one or two short, natural spoken sentences — no markdown, no lists, no emoji.
 
-The console has three views: the 3D globe ("globe"), the cyber "threat intel" view, and the geopolitical "osint" view. The globe has toggleable data layers (e.g. earthquakes, flights, satellites, vessels, traffic, cctv, "osint-events" for strategic chokepoints).
+The console has four views: the 3D globe ("globe"), the cyber "threat intel" view, the geopolitical "osint" view, and the "cases" link-analysis board. The globe has toggleable data layers (e.g. earthquakes, flights, satellites, vessels, traffic, cctv, "osint-events" for strategic chokepoints).
 
-You can act on the console with the provided tools — switch view, toggle a globe layer, or fly the globe to a place. Use a tool only when the user clearly asks to navigate or change what is shown; otherwise just answer. You may both say a brief sentence and call one tool in the same turn. For questions, answer helpfully and concisely from general knowledge; for deep, current intelligence detail tell the user which view or the Analyst tab to open. Never invent specific live readings you were not given.`;
+The Case Board lets the user build an investigation from threat entities — threat groups, malware, ATT&CK techniques/software, indicators, and CVEs. You can drive it by voice: start a case, add an entity by name, expand a node to pull in everything it connects to, or remove one. The user watches the board assemble as you act. Cases are about threat entities, never private individuals.
+
+Act on the console with the provided tools — switch view, toggle a globe layer, fly the globe to a place, or build the case. When the user says things like "add APT29 to the case", "expand it", "pull in its techniques", "start a new case", call the matching case tool. You may both say a brief sentence and call one tool in the same turn; for a multi-step request, call the single most important tool and briefly say the next step. For questions, answer concisely; for deep live detail point the user to the right view. Never invent specific live readings you were not given.`;
 
 const TOOLS = [
   {
@@ -31,9 +33,54 @@ const TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        view: { type: 'string', enum: ['globe', 'threat-intel', 'osint'] },
+        view: {
+          type: 'string',
+          enum: ['globe', 'threat-intel', 'osint', 'cases'],
+        },
       },
       required: ['view'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'case_new',
+    description: 'Start a new, empty case on the Case Board.',
+    input_schema: {
+      type: 'object',
+      properties: { name: { type: 'string' } },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'case_add',
+    description:
+      'Add a threat entity to the current case by name — a threat group (e.g. "APT29"), malware ("Cobalt Strike"), ATT&CK technique ("T1055" or "Process Injection"), indicator, or CVE. Starts a case if none is open.',
+    input_schema: {
+      type: 'object',
+      properties: { entity: { type: 'string' } },
+      required: ['entity'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'case_expand',
+    description:
+      'Expand a case node into everything it connects to. Name the node (e.g. "APT29"); omit to expand the most recently added node.',
+    input_schema: {
+      type: 'object',
+      properties: { entity: { type: 'string' } },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'case_remove',
+    description: 'Remove a node from the current case by name.',
+    input_schema: {
+      type: 'object',
+      properties: { entity: { type: 'string' } },
+      required: ['entity'],
       additionalProperties: false,
     },
   },

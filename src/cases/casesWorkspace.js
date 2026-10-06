@@ -31,9 +31,18 @@ const KIND_LABEL = {
 
 // Exposed so the voice agent can drive the same operations the UI does.
 let active = null;
+let voiceApi = null;
 /** @returns {?{controller: object, index: object, addBySearch: Function}} */
 export function activeCaseApi() {
   return active;
+}
+/**
+ * Programmatic case operations for the voice agent — the same actions the UI
+ * buttons perform, so a spoken command builds the board identically.
+ * @returns {?object}
+ */
+export function casesVoiceApi() {
+  return voiceApi;
 }
 
 export function mountCasesWorkspace() {
@@ -337,12 +346,38 @@ export function mountCasesWorkspace() {
     renderPicker();
   }
 
-  async function newCase() {
-    const rec = await createCase('Untitled case');
+  async function newCase(name) {
+    const rec = await createCase(name && name.trim() ? name : 'Untitled case');
     await refreshPicker();
     await openCase(rec.id);
-    const name = prompt_fallback();
-    if (name) controller.rename(name);
+    // Prompt for a name only from the UI button (name === undefined).
+    if (name === undefined) {
+      const chosen = prompt_fallback();
+      if (chosen) controller.rename(chosen);
+    }
+    return rec;
+  }
+
+  // Find a node by a spoken term (label/id match), or the most recent node.
+  function findNodeKey(term) {
+    if (!controller?.record) return null;
+    const t = String(term || '')
+      .trim()
+      .toLowerCase();
+    if (!t) return controller.record.nodes.at(-1)?.key || null;
+    const hit = controller.record.nodes.find(
+      (n) =>
+        n.label.toLowerCase().includes(t) ||
+        String(n.id).toLowerCase().includes(t) ||
+        n.key.toLowerCase().includes(t),
+    );
+    return hit?.key || null;
+  }
+
+  async function ensureReady() {
+    show('cases');
+    await ensureIndex();
+    if (!controller?.record?.id) await newCase('Untitled case');
   }
 
   // prompt() is unavailable in some hosts; keep it optional.
@@ -418,6 +453,43 @@ export function mountCasesWorkspace() {
   for (const button of switcher.querySelectorAll('button[data-view]'))
     button.addEventListener('click', () => show(button.dataset.view));
   root.addEventListener('keydown', (e) => e.stopPropagation());
+
+  // Voice agent operations — mirror the UI, so a spoken command builds the board.
+  voiceApi = {
+    show: () => show('cases'),
+    async newCase(name) {
+      show('cases');
+      await ensureIndex();
+      await newCase(name || 'Untitled case');
+      return true;
+    },
+    async addEntity(term) {
+      await ensureReady();
+      const r = addBySearch(term);
+      if (r?.key) selectNode(r.key);
+      // No search hit at all → signal "unknown" so the caller can speak it.
+      return r || { added: false, reason: 'unknown' };
+    },
+    async expand(term) {
+      await ensureReady();
+      const key = findNodeKey(term);
+      if (!key) return { ok: false };
+      selectNode(key);
+      const added = controller.expand(key);
+      return { ok: true, added, label: controller.entityFor(key)?.node.label };
+    },
+    remove(term) {
+      const key = findNodeKey(term);
+      if (!key) return false;
+      controller.removeNode(key);
+      if (selectedKey === key) {
+        selectedKey = null;
+        renderPanel();
+      }
+      return true;
+    },
+    hasCase: () => Boolean(controller?.record?.id),
+  };
 
   renderPanel();
   renderState();

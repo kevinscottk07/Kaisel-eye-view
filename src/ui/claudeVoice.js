@@ -12,14 +12,18 @@
  * a Claude key is — otherwise the normal OpenAI voice path runs unchanged.
  */
 
+import { casesVoiceApi } from '../cases/casesWorkspace.js';
+
 const SpeechRecognitionImpl =
   typeof window !== 'undefined'
     ? window.SpeechRecognition || window.webkitSpeechRecognition
     : null;
 
 function currentView() {
+  const cases = document.getElementById('cases-workspace');
   const osint = document.getElementById('osint-workspace');
   const ti = document.getElementById('threat-intel-workspace');
+  if (cases && !cases.hidden) return 'cases';
   if (osint && !osint.hidden) return 'osint';
   if (ti && !ti.hidden) return 'threat-intel';
   return 'globe';
@@ -84,10 +88,11 @@ function flyTo(place) {
   return true;
 }
 
-function executeAction(action) {
+async function executeAction(action) {
+  const cases = casesVoiceApi();
   switch (action?.type) {
     case 'switch_view':
-      if (['globe', 'threat-intel', 'osint'].includes(action.view))
+      if (['globe', 'threat-intel', 'osint', 'cases'].includes(action.view))
         switchView(action.view);
       break;
     case 'toggle_layer':
@@ -96,6 +101,24 @@ function executeAction(action) {
       break;
     case 'fly_to':
       if (action.place) flyTo(action.place);
+      break;
+    case 'case_new':
+      await cases?.newCase(action.name);
+      break;
+    case 'case_add': {
+      const r = await cases?.addEntity(action.entity);
+      if (r && !r.added && r.reason === 'unknown')
+        toast(`No entity matching "${action.entity}".`);
+      break;
+    }
+    case 'case_expand': {
+      const r = await cases?.expand(action.entity);
+      if (r && !r.ok) toast('No matching node to expand.');
+      break;
+    }
+    case 'case_remove':
+      if (cases && !cases.remove(action.entity))
+        toast(`No node matching "${action.entity}".`);
       break;
     default:
       break;
@@ -170,7 +193,10 @@ export function mountClaudeVoice() {
         toast(body.speech);
         speak(body.speech);
       }
-      for (const action of body.actions || []) executeAction(action);
+      const actions = body.actions || [];
+      for (const action of actions) await executeAction(action);
+      // If the model acted without words, give a brief spoken confirmation.
+      if (!body.speech && actions.length) speak('Done.');
     } catch {
       speak('Sorry, I could not reach the voice service.');
     } finally {
