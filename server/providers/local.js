@@ -29,6 +29,7 @@ import { windProxy } from './wind.js';
 import { threatIntelProxy } from './threat-intel.js';
 import { osintProxy } from './osint.js';
 import { claudeVoiceProxy } from './ai/voice.js';
+import { casesProxy } from './cases.js';
 
 /**
  * Construct the local provider plugins in their established order.
@@ -72,6 +73,7 @@ function localProviderPlugins({ realtime } = {}) {
     threatIntelProxy(),
     osintProxy(),
     claudeVoiceProxy(),
+    casesProxy(),
     keySetupEndpoint(),
   ];
 }

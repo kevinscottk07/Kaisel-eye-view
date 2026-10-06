@@ -228,3 +228,43 @@ export async function loadOsint() {
   }
   return body;
 }
+
+// ---- shared index (reused by the Threat Intel and Cases views) -----
+
+let _indexPromise = null;
+/** One cached threat-intel index shared across views; force reloads it. */
+export function sharedThreatIntelIndex(force = false) {
+  if (!_indexPromise || force) _indexPromise = loadThreatIntel();
+  return _indexPromise;
+}
+
+// ---- cases CRUD ----------------------------------------------------
+
+export async function listCases() {
+  const body = await getJson('/api/cases');
+  return body.cases || [];
+}
+export async function createCase(name) {
+  const res = await fetch('/api/cases', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error(`Create failed (HTTP ${res.status})`);
+  return res.json();
+}
+export async function getCase(id) {
+  return getJson(`/api/cases/${encodeURIComponent(id)}`);
+}
+export async function saveCase(record) {
+  const res = await fetch(`/api/cases/${encodeURIComponent(record.id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!res.ok) throw new Error(`Save failed (HTTP ${res.status})`);
+  return res.json();
+}
+export async function deleteCase(id) {
+  await fetch(`/api/cases/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
