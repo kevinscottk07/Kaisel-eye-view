@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 
+import { anthropicClient } from '../ai/client.js';
+
 const MODEL_DEFAULT = 'claude-opus-5-5';
 
 const SYSTEM = `You are the threat-intelligence analyst built into a personal security operations dashboard. The user is a SOC analyst who reads your output inside the dashboard's Analyst tab.
@@ -34,24 +36,13 @@ Keep to published, defensive framing — understanding and reducing this asset's
 
 Format with short markdown: "## " headings, "- " bullets and **bold** for the key term in a line. No tables. Keep it under roughly 450 words.`;
 
-let cachedClient = null;
-let cachedKey = null;
-
-function clientFor(apiKey) {
-  if (!cachedClient || cachedKey !== apiKey) {
-    cachedClient = new Anthropic({ apiKey });
-    cachedKey = apiKey;
-  }
-  return cachedClient;
-}
-
 /**
  * Shared Claude call for the briefing endpoints. `context` is cached so a
  * follow-up within a few minutes reuses the same prefix.
  * @returns {Promise<{ok: true, text: string, model: string} | {ok: false, status: number, error: string}>}
  */
 async function runBrief({ apiKey, system, context, ask }) {
-  const client = clientFor(apiKey);
+  const client = anthropicClient(apiKey);
   try {
     const response = await client.beta.messages.create({
       model: process.env.THREAT_INTEL_MODEL || MODEL_DEFAULT,

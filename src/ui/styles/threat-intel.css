@@ -1691,3 +1691,8 @@ body.ui-embed #osint-workspace {
   border-radius: 8px;
   white-space: pre;
 }
+
+/* Claude voice active state on the globe MIC button. */
+#gev-voice-button.claude-voice-live {
+  box-shadow: 0 0 0 2px var(--accent), 0 0 18px var(--accent-glow);
+}

@@ -2,6 +2,7 @@ import { createStandaloneApplication } from './standalone/application.js';
 import { describeError } from './standalone/errors.js';
 import { mountThreatIntelWorkspace } from './threatIntel/workspace.js';
 import { mountOsintWorkspace } from './threatIntel/osintWorkspace.js';
+import { mountClaudeVoice } from './ui/claudeVoice.js';
 
 const application = createStandaloneApplication({
   googleApiKey: import.meta.env.GOOGLE_MAPS_API_KEY,
@@ -18,5 +19,6 @@ application.start().catch((error) => {
 
 mountThreatIntelWorkspace();
 mountOsintWorkspace();
+mountClaudeVoice();
 
 export { application };

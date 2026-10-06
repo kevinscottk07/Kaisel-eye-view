@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { anthropicClient } from './client.js';
 
 import { HUD_SUMMARY_INSTRUCTIONS } from '../../../src/hudSummaryResponse.js';
 import { makeCostRateLimiter, clientKey } from '../common/rate-limit.js';
@@ -15,17 +15,7 @@ import { readRequestBody } from '../common/request.js';
 const MODEL_DEFAULT = 'claude-haiku-4-5';
 const ANTHROPIC_DEFAULT_PER_MIN = 30;
 
-let cachedClient = null;
-let cachedKey = null;
 let limiter;
-
-function clientFor(apiKey) {
-  if (!cachedClient || cachedKey !== apiKey) {
-    cachedClient = new Anthropic({ apiKey });
-    cachedKey = apiKey;
-  }
-  return cachedClient;
-}
 
 /** Collapse the model's reply to exactly five words, matching the OpenAI path. */
 function toFiveWordHudSummary(value) {
@@ -64,7 +54,7 @@ export async function handleClaudeHudSummary(req, res) {
   try {
     const body = await readRequestBody(req, 64 * 1024);
     const context = JSON.parse(body || '{}');
-    const response = await clientFor(apiKey).messages.create({
+    const response = await anthropicClient(apiKey).messages.create({
       model: process.env.GEV_HUD_SUMMARY_MODEL || MODEL_DEFAULT,
       max_tokens: 32,
       system: HUD_SUMMARY_INSTRUCTIONS,
