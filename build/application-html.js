@@ -11,6 +11,7 @@ export const APPLICATION_TEMPLATES = Object.freeze([
   'provider-settings',
   'hud-loading',
   'threat-intel',
+  'osint',
 ]);
 const allowed = new Set(APPLICATION_TEMPLATES);
 

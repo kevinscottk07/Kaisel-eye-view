@@ -195,3 +195,36 @@ export function searchAll(index, query, limit = 6) {
   );
   return hits;
 }
+
+// ---- OSINT (Kaisel-Crucix proxy) -----------------------------------
+
+/** Crucix engine status: {available, url, sourcesOk, lastSweep, ...}. */
+export async function osintStatus() {
+  try {
+    return await getJson('/api/osint/status');
+  } catch {
+    return { available: false };
+  }
+}
+
+/**
+ * Load the Crucix OSINT snapshot. Throws an Error whose `code` is
+ * `crucix_unavailable` when the engine is not running.
+ */
+export async function loadOsint() {
+  const res = await fetch('/api/osint/data', {
+    headers: { Accept: 'application/json' },
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const error = new Error(
+      body.error === 'crucix_unavailable'
+        ? 'The Crucix OSINT engine is not running.'
+        : body.error || `Request failed (HTTP ${res.status}).`,
+    );
+    error.code = body.error || 'failed';
+    error.url = body.url || null;
+    throw error;
+  }
+  return body;
+}
